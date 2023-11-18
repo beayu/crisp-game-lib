@@ -5,23 +5,17 @@ description = `
 
 characters = [
   `
-  llllll
-  ll l l
-  llllll
-  ll  ll
-  `,
-  `
-   llll
-   l  l
-   l  l
-   l  l
-  ll  ll
-  ll  ll
+   ll
+   l  
+   l  
+   l  
+  ll  
+  ll  
   `
 ];
 
 options = {
-  theme: "dark",
+  theme: "shapeDark",
   viewSize: {x: 100, y: 120},
   isPlayingBgm: true,
   isReplayEnabled: true,
@@ -29,6 +23,7 @@ options = {
 
 let player; 
 let enemies;
+let square; 
 
 function update() {
   if (!ticks) {
@@ -41,6 +36,8 @@ function update() {
       {posX: rndi(15, 85), posY: -20, radius: rndi(5, 15), isGrowing: rndi(0, 1) == 0, color: "black"},
       {posX: rndi(15, 85), posY: -40, radius: rndi(5, 15), isGrowing: rndi(0, 1) == 0, color: "black"}
     ];
+
+    square = {posX: rndi(10, 90), posY: -60, width: 10, isGrowing: rndi(0, 1) == 0}; 
   }
 
   color("black");
@@ -49,9 +46,12 @@ function update() {
   updateEnemies(); 
 
   if (ticks % 2) {
-    enemies.forEach(enemy=> enemy.posY+= 0.5); 
+    enemies.forEach(enemy=> enemy.posY += 0.5); 
+    square.posY += 0.7;
     dilate(); 
   }
+
+  playerShoot(); 
 }
 
 function drawEnemies() {
@@ -59,6 +59,9 @@ function drawEnemies() {
     color(enemy.color);
     arc(enemy.posX, enemy.posY, enemy.radius); 
   }
+
+  color("blue"); 
+  rect(square.posX, square.posY, square.width, square.width); 
 }
 
 function resetEnemy(enemy) {
@@ -68,12 +71,22 @@ function resetEnemy(enemy) {
   enemy.isGrowing = rndi(0, 1);
 }
 
+function resetSquare() {
+  square.posX = rndi(10, 90); 
+  square.posY = -60; 
+}
+
 function updateEnemies() {
   for (const enemy of enemies) {
-    if (enemy.posY >= 120) {
-      resetEnemy(enemy); 
+    if (enemy.posY >= 110) {
+      play("hit"); 
+      end(); 
     }
-  }
+    if (square.posY >= 110) {
+      play("hit"); 
+      end(); 
+    }
+  }    
 }
 
 function dilate() {
@@ -90,6 +103,46 @@ function dilate() {
       enemy.radius--; 
       if (enemy.radius <= 5) {
         enemy.isGrowing = true; 
+      }
+    }
+  }
+
+  if (square.isGrowing) {
+    square.width++; 
+    if (square.width >= 15) {
+      square.isGrowing = false; 
+    }
+  }
+  else{
+    square.width--; 
+    if (square.width <= 5) {
+      square.isGrowing = true; 
+    }
+  }
+}
+
+function playerShoot() {
+  if(input.isJustReleased){
+    //sort enemies - closest enemy to player is first
+    const sortedEnemies = enemies.sort(enemy=> enemy.posY);
+
+    for (const enemy of sortedEnemies) {
+      if (enemy.color == "purple" && enemy.posY <=  110){ 
+        // respawn enemy
+        resetEnemy(enemy);
+  
+        // increase score
+        addScore(1);
+        play("coin");
+
+        color("purple"); 
+        particle (
+          enemy.posX,
+          enemy.posY,
+          10,
+          1,
+        )
+        break
       }
     }
   }
