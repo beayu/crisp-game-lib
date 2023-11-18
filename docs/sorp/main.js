@@ -1,152 +1,151 @@
-title = "S OR P";
+title = "bebus game";
 
 description = `
-[SPACE] SWIPE
+[click] when 
+   purple
 `;
 
 characters = [
   `
-  lll
- l l ll
-  llll
-  l  l
- ll  ll
-   `,
-   `
-  lll
- l l ll
-  llll
    ll
-  l  l
-  l  l
-   `,
-   `
- llllll
- ll l l
- ll l l
- llllll
-  l  l
-  l  l
-     `,
-   `
- llllll
- ll l l
- ll l l
- llllll
- ll  ll
-     `,
+   l  
+   l  
+   l  
+  ll  
+  ll  
+  `
 ];
 
 options = {
-  theme: "dark",
+  theme: "shapeDark",
+  viewSize: {x: 100, y: 120},
   isPlayingBgm: true,
   isReplayEnabled: true,
 };
 
-// var defs
-let dates;
-let px, pt, pi, pvx;
-let gy;
-let tgy;
-let bi;
-let scr;
-let isFirstPressing;
+let player; 
+let enemies;
+let square; 
 
 function update() {
   if (!ticks) {
-    // initalize vars
-    dates = [];
-    px = 50;
-    pt = -1;
-    pi = 0;
-    pvx = -1;
-    gy = 50;
-    bi = 0;
-    scr = 0.1;
-    isFirstPressing = true;
-    gy = tgy = 91;
+    // player 
+    player = {pos: vec(50, 110)};
+
+    // enemies
+    enemies = [
+      {posX: rndi(15, 85), posY: 0, radius: rndi(5, 15), isGrowing: rndi(0, 1) == 0, color: "black"}, 
+      {posX: rndi(15, 85), posY: -20, radius: rndi(5, 15), isGrowing: rndi(0, 1) == 0, color: "black"},
+      {posX: rndi(15, 85), posY: -40, radius: rndi(5, 15), isGrowing: rndi(0, 1) == 0, color: "black"}
+    ];
+
+    // square = {posX: rndi(10, 90), posY: -60, width: 10, isGrowing: rndi(0, 1) == 0}; 
   }
 
-  // targets
   color("black");
-  gy += (tgy - gy) * 0.1;
-  color("red");
-  rect(0, gy, 50, 8);
-  color("green");
-  rect(50, gy, 50, 8);
-  color("white");
-  char(":", 5, gy + 4);
-  char("(", 10, gy + 4);
-  text("PASS", 20, gy + 4);
-  char("3", 95, gy + 4);
-  char("<", 88, gy + 4);
-  text("SMASH", 55, gy + 4);
+  char("a", player.pos);
+  drawEnemies(); 
+  updateEnemies(); 
 
-  // swipe input
-  color(pt < 0 ? "red" : "green");
-  char(addWithCharCode("a", pt + 1 + (floor(ticks / 30) % 2)), px, 9);
-  if (gy <= 12) {
-    play("explosion");
-    end();
+  if (ticks % 2) {
+    enemies.forEach(enemy=> enemy.posY += 0.5); 
+    // square.posY += 0.7;
+    dilate(); 
   }
-  pi--;
-  let speed = 1;
-  if (input.isPressed && !isFirstPressing) {
-    if (pi < 0) {
-      const p = {
-        pos: vec(px, 9),
-        vel: vec(),
-        type: pt,
-        prevPos: vec(),
-      };
-      p.prevPos.set(p.pos);
-      dates.push(p);
-      pi = 9;
+
+  playerShoot(); 
+}
+
+function drawEnemies() {
+  for (const enemy of enemies) {
+    color(enemy.color);
+    arc(enemy.posX, enemy.posY, enemy.radius); 
+  }
+
+  // color("blue"); 
+  // rect(square.posX, square.posY, square.width, square.width); 
+}
+
+function resetEnemy(enemy) {
+  enemy.posX = rndi(15, 85); 
+  enemy.posY = 0; 
+  enemy.radius = rndi(5, 15);
+  enemy.isGrowing = rndi(0, 1);
+}
+
+function resetSquare() {
+  square.posX = rndi(10, 90); 
+  square.posY = -60; 
+}
+
+function updateEnemies() {
+  for (const enemy of enemies) {
+    if (enemy.posY >= 110) {
+      play("hit"); 
+      end(); 
     }
-    speed = 0.1;
-  }
-  px += pvx * difficulty * speed;
-  if ((px < 10 && pvx < 0) || (px > 90 && pvx > 0)) {
-    pvx *= -1;
-  }
-  if (input.isJustReleased) {
-    if (isFirstPressing) {
-      isFirstPressing = false;
-    } else {
-      pt *= -1;
-    }
-  }
+    // if (square.posY >= 110) {
+    //   play("hit"); 
+    //   end(); 
+    // }
+  }    
+}
 
-  // dates spawn
-  dates = dates.filter((p) => {
-    p.vel.y += 0.2;
-    p.vel.mul(0.9);
-    p.prevPos.set(p.pos);
-    p.pos.add(p.vel);
-    color(p.type < 0 ? "red" : "green");
-    const c = char(
-      addWithCharCode("a", p.type + 1 + (floor(ticks / 30) % 2)),
-      p.pos
-    ).isColliding.char;
+function dilate() {
+  for (const enemy of enemies){
+    enemy.color = (enemy.radius <= 7)? "purple": "black"; 
 
-    // romance score
-    if (p.pos.y > gy) {
-      const isOk = (p.pos.x - 50) * p.type > 0;
-      if (isOk) {
-        play("explosion");
-        addScore(1, p.pos);
-        return false;
-      } else {
-        play("powerUp");
-        addScore(-5, p.pos);
-        let oy = sqrt(1) * difficulty;
-        if (oy > 20) {
-          oy = 20;
-        }
-        tgy -= oy + 10;
-        return false;
+    if (enemy.isGrowing) {
+      enemy.radius++; 
+      if (enemy.radius >= 15) {
+        enemy.isGrowing = false; 
       }
     }
-    return true;
-  });
+    else{
+      enemy.radius--; 
+      if (enemy.radius <= 5) {
+        enemy.isGrowing = true; 
+      }
+    }
+  }
+
+  // if (square.isGrowing) {
+  //   square.width++; 
+  //   if (square.width >= 15) {
+  //     square.isGrowing = false; 
+  //   }
+  // }
+  // else{
+  //   square.width--; 
+  //   if (square.width <= 5) {
+  //     square.isGrowing = true; 
+  //   }
+  // }
+}
+
+function playerShoot() {
+  if(input.isJustReleased){
+    //sort enemies - closest enemy to player is first
+    const sortedEnemies = enemies.sort(enemy=> enemy.posY);
+
+    for (const enemy of sortedEnemies) {
+      if (enemy.color == "purple" && enemy.posY <=  110){ 
+        // respawn enemy
+        resetEnemy(enemy);
+  
+        // increase score
+        addScore(1);
+        play("coin");
+
+        color("purple"); 
+        particle (
+          enemy.posX,
+          enemy.posY,
+          10,
+          1,
+        )
+        break
+      }
+    }
+  }
 }
